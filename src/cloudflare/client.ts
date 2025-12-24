@@ -160,16 +160,26 @@ export class CloudflareMetricsClient {
 	constructor(config: CloudflareMetricsClientConfig) {
 		this.config = config;
 		this.logger = createLogger("cf_api", config.loggerConfig);
+
+		// Wrap fetch with retry logic
+		const retryingFetch = createRetryFetch(config.fetch ?? globalThis.fetch, {
+			logger: this.logger,
+			retries: 3,
+			initialDelay: 500,
+			maxDelay: 10000,
+		});
+
 		this.api = new Cloudflare({
 			apiToken: config.apiToken,
-			fetch: config.fetch,
+			fetch: retryingFetch,
+			maxRetries: 0, // Disable internal SDK retries to avoid double-wrapping
 		});
 
 		this.gql = new Client({
 			url: CLOUDFLARE_GQL_URL,
 			preferGetMethod: false,
 			exchanges: [fetchExchange],
-			fetch: config.fetch,
+			fetch: retryingFetch,
 			fetchOptions() {
 				return {
 					headers: {
