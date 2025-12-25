@@ -14,6 +14,22 @@
 			]
 		}
 	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MetricCoordinator",
+				"class_name": "MetricCoordinator"
+			},
+			{
+				"name": "AccountMetricCoordinator",
+				"class_name": "AccountMetricCoordinator"
+			},
+			{
+				"name": "MetricExporter",
+				"class_name": "MetricExporter"
+			}
+		]
+	},
     "observability": {
         "logs": {
             "enabled": true,
