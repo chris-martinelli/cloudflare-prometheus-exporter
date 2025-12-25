@@ -4,20 +4,12 @@
 	"main": "src/worker.tsx",
 	"compatibility_date": "2025-12-09",
 	"compatibility_flags": ["nodejs_compat"],
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": [
-				"MetricExporter",
-				"MetricCoordinator",
-				"AccountMetricCoordinator"
-			]
-		}
-	],
-"migrations": [
+    "migrations": [
   {
-    "tag": "v1", // A version tag (can be anything unique)
-    "new_classes": ["CloudflareExporter"] // MUST match the "class_name" inside your durable_objects binding
+    "tag": "v3",
+    "new_classes": [
+      "MetricExporter"
+    ]
   }
 ],
 	"durable_objects": {
