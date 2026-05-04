@@ -11,6 +11,7 @@ import {
 	type LoggerConfig,
 } from "../lib/logger";
 import type { MetricDefinition } from "../lib/metrics";
+import { getEnvDefaults } from "../lib/runtime-config";
 import type {
 	Account,
 	LoadBalancerPool,
@@ -3444,11 +3445,15 @@ export function getCloudflareMetricsClient(env: Env): CloudflareMetricsClient {
 
 	const loggerConfig = configFromEnv(env);
 	const logger = createLogger("cf_client_singleton", loggerConfig);
+	const defaults = getEnvDefaults(env);
 
 	logger.info("Creating CloudflareMetricsClient singleton", {
 		rate_limit: "200/10s",
 		log_level: loggerConfig.level,
 		log_format: loggerConfig.format,
+		query_limit: defaults.queryLimit,
+		scrape_delay_seconds: defaults.scrapeDelaySeconds,
+		time_window_seconds: defaults.timeWindowSeconds,
 	});
 
 	const rateLimitedFetch = createRateLimitedFetch(
@@ -3458,9 +3463,9 @@ export function getCloudflareMetricsClient(env: Env): CloudflareMetricsClient {
 
 	const client = new CloudflareMetricsClient({
 		apiToken: env.CLOUDFLARE_API_TOKEN,
-		scrapeDelaySeconds: env.SCRAPE_DELAY_SECONDS,
-		timeWindowSeconds: env.TIME_WINDOW_SECONDS,
-		queryLimit: env.QUERY_LIMIT,
+		scrapeDelaySeconds: defaults.scrapeDelaySeconds,
+		timeWindowSeconds: defaults.timeWindowSeconds,
+		queryLimit: defaults.queryLimit,
 		loggerConfig,
 		fetch: rateLimitedFetch,
 	});
