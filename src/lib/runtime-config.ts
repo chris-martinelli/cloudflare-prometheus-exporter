@@ -17,6 +17,8 @@ export const ConfigKeySchema = z.enum([
 	"zoneListCacheTtlSeconds",
 	"sslCertsCacheTtlSeconds",
 	"healthCheckCacheTtlSeconds",
+	// Counter accumulator retention
+	"counterTtlSeconds",
 	// Logging
 	"logFormat",
 	"logLevel",
@@ -50,6 +52,7 @@ const ConfigValueSchemas = {
 	zoneListCacheTtlSeconds: z.number().int().nonnegative(),
 	sslCertsCacheTtlSeconds: z.number().int().nonnegative(),
 	healthCheckCacheTtlSeconds: z.number().int().nonnegative(),
+	counterTtlSeconds: z.number().int().nonnegative(),
 	logFormat: z.enum(["json", "pretty"]),
 	logLevel: z.enum(["debug", "info", "warn", "error"]),
 	cfAccounts: z.string().nullable(),
@@ -80,6 +83,7 @@ export const ConfigOverridesSchema = z
 			ConfigValueSchemas.sslCertsCacheTtlSeconds.optional(),
 		healthCheckCacheTtlSeconds:
 			ConfigValueSchemas.healthCheckCacheTtlSeconds.optional(),
+		counterTtlSeconds: ConfigValueSchemas.counterTtlSeconds.optional(),
 		logFormat: ConfigValueSchemas.logFormat.optional(),
 		logLevel: ConfigValueSchemas.logLevel.optional(),
 		cfAccounts: ConfigValueSchemas.cfAccounts.optional(),
@@ -113,6 +117,7 @@ export const ResolvedConfigSchema = z
 		zoneListCacheTtlSeconds: ConfigValueSchemas.zoneListCacheTtlSeconds,
 		sslCertsCacheTtlSeconds: ConfigValueSchemas.sslCertsCacheTtlSeconds,
 		healthCheckCacheTtlSeconds: ConfigValueSchemas.healthCheckCacheTtlSeconds,
+		counterTtlSeconds: ConfigValueSchemas.counterTtlSeconds,
 		logFormat: ConfigValueSchemas.logFormat,
 		logLevel: ConfigValueSchemas.logLevel,
 		cfAccounts: ConfigValueSchemas.cfAccounts,
@@ -141,6 +146,7 @@ type OptionalEnvVars = {
 	CF_FREE_TIER_ACCOUNTS?: string;
 	HEALTH_CHECK_CACHE_TTL_SECONDS?: string;
 	HOST_METRICS_ALLOWLIST?: string;
+	COUNTER_TTL_SECONDS?: string;
 };
 
 /**
@@ -181,6 +187,15 @@ export function getEnvDefaults(env: Env): ResolvedConfig {
 			.number()
 			.catch(10)
 			.parse(optionalEnv.HEALTH_CHECK_CACHE_TTL_SECONDS),
+		// Counter accumulators are stored as SQLite rows (not a single blob), so the
+		// ceiling is the DO database size, not 128 KB. Pruning is purely a growth
+		// bound: 0 disables it. Default 14d trims only label series that have been
+		// completely silent for >14d (which reset on return — harmless for
+		// rate()/increase()), so operators never need to touch this.
+		counterTtlSeconds: z.coerce
+			.number()
+			.catch(1209600)
+			.parse(optionalEnv.COUNTER_TTL_SECONDS),
 		logFormat: z.enum(["json", "pretty"]).catch("pretty").parse(env.LOG_FORMAT),
 		logLevel: z
 			.enum(["debug", "info", "warn", "error"])
@@ -272,6 +287,8 @@ function mergeConfig(
 		healthCheckCacheTtlSeconds:
 			overrides.healthCheckCacheTtlSeconds ??
 			defaults.healthCheckCacheTtlSeconds,
+		counterTtlSeconds:
+			overrides.counterTtlSeconds ?? defaults.counterTtlSeconds,
 		logFormat: overrides.logFormat ?? defaults.logFormat,
 		logLevel: overrides.logLevel ?? defaults.logLevel,
 		cfAccounts:

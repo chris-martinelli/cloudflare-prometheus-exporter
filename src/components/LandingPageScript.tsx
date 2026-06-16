@@ -22,6 +22,7 @@ export const LandingPageScript: FC<Props> = ({
 			const configFields = [
 				'queryLimit', 'scrapeDelaySeconds', 'timeWindowSeconds', 'metricRefreshIntervalSeconds',
 				'accountListCacheTtlSeconds', 'zoneListCacheTtlSeconds', 'sslCertsCacheTtlSeconds',
+				'counterTtlSeconds',
 				'logLevel', 'logFormat', 'cfAccounts', 'cfZones', 'cfFreeTierAccounts', 'metricsDenylist',
 				'excludeHost', 'httpStatusGroup', 'hostMetricsAllowlist', 'hostMetricsDelaySeconds'
 			];

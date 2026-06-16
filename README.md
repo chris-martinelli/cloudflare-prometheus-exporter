@@ -53,6 +53,7 @@ Set in `wrangler.jsonc` or via `wrangler secret put`:
 | `ACCOUNT_LIST_CACHE_TTL_SECONDS` | 600 | Account list cache TTL |
 | `ZONE_LIST_CACHE_TTL_SECONDS` | 1800 | Zone list cache TTL |
 | `SSL_CERTS_CACHE_TTL_SECONDS` | 1800 | SSL cert cache TTL |
+| `COUNTER_TTL_SECONDS` | 1209600 | Retention for counter accumulators (seconds, default 14d). A counter series silent longer than this is dropped and restarts if it returns (a Prometheus counter reset, which `rate()`/`increase()` handle). `0` disables pruning entirely. Self-managing — operators normally never need to change this. |
 | `HEALTH_CHECK_CACHE_TTL_SECONDS` | 10 | Health check cache TTL |
 | `EXCLUDE_HOST` | false | Exclude host labels from metrics |
 | `CF_HTTP_STATUS_GROUP` | false | Group HTTP status codes (2xx, 4xx, etc.) |

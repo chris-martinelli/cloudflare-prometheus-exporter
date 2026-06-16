@@ -35,7 +35,7 @@ src/
 |--------|------|----------|------|
 | `MetricCoordinator` | DO | `durable-objects/MetricCoordinator.ts` | Singleton, owns account list, delegates to AccountMetricCoordinator |
 | `AccountMetricCoordinator` | DO | `durable-objects/AccountMetricCoordinator.ts` | Per-account, manages zone list + MetricExporter DOs |
-| `MetricExporter` | DO | `durable-objects/MetricExporter.ts` | Per-query scope, fetches + caches metrics, handles counter accumulation |
+| `MetricExporter` | DO | `durable-objects/MetricExporter.ts` | Per-query scope, fetches metrics into SQLite tables, handles counter accumulation. Account-scoped exporters are coordinator-driven; zone-scoped (SSL/LB) self-schedule via alarms |
 | `CloudflareMetricsClient` | Class | `cloudflare/client.ts` | GraphQL + REST client, DataLoader batching |
 | `getConfig` | Fn | `lib/runtime-config.ts` | Merges KV overrides with env defaults |
 | `serializeToPrometheus` | Fn | `lib/prometheus.ts` | MetricDefinition[] → text format |
@@ -84,6 +84,10 @@ src/
 **Free tier handling:** `CF_FREE_TIER_ACCOUNTS` env var, zones filtered from paid-tier GraphQL queries
 
 **Counter accumulation:** Cloudflare returns window totals; DOs accumulate for Prometheus monotonic semantics
+
+**MetricExporter storage:** Metric data lives in per-DO SQLite tables (`counters`: one row per series with monotonic `accumulated` + `last_seen`; `gauges`: current-window, rebuilt each refresh), NOT in the `state` KV value (which is slim identity/refresh metadata only). This avoids the 128 KB per-value limit (`SQLITE_TOOBIG`). `export()` reconstructs `MetricDefinition[]` from the tables (counters where `last_seen = lastRefresh` + all gauges). Account fetch context (`zones`/`firewallRules`) is NOT persisted — the coordinator passes it to `refreshAccountScoped` every cycle. Writes run in a `transactionSync` so a failed refresh keeps the prior snapshot. Legacy (pre-SQLite) state blobs auto-migrate on load (counters discarded → one-time reset).
+
+**Counter retention:** `COUNTER_TTL_SECONDS` (default 14d, `0` disables) prunes counter series idle longer than the TTL via `DELETE ... WHERE last_seen < cutoff`. Series active within the TTL keep continuous monotonic counters; only longer-idle series reset on return. Self-managing; growth is bounded by the DO SQLite db size, not 128 KB.
 
 **Hostname metrics:** Allowlist-based (`HOST_METRICS_ALLOWLIST`, max 50). All gauges, fixed 1-minute window for alerting. Avg latencies as primary metrics; P50/P95 as separate metric families (`_p50_seconds`, `_p95_seconds`). Ingestion delay controlled by `HOST_METRICS_DELAY_SECONDS` (default 60s), independent from global `SCRAPE_DELAY_SECONDS`. Hosts normalized to lowercase. Disabled when allowlist empty or `excludeHost=true`.
 

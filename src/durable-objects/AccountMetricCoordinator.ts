@@ -163,7 +163,9 @@ export class AccountMetricCoordinator extends DurableObject<Env> {
 	}
 
 	/**
-	 * Refreshes zone list and pushes context to exporters. Exporters handle their own metric fetching via alarms.
+	 * Refreshes zone list, then drives account-scoped exporter refreshes and
+	 * initializes zone-scoped exporters. Account-scoped exporters fetch metrics
+	 * synchronously here each cycle; zone-scoped exporters self-schedule alarms.
 	 *
 	 * @param config Resolved runtime configuration.
 	 * @param logger Logger instance.
@@ -271,7 +273,7 @@ export class AccountMetricCoordinator extends DurableObject<Env> {
 						`account:${state.accountId}:${query}`,
 						this.env,
 					);
-					await exporter.updateZoneContext(
+					await exporter.refreshAccountScoped(
 						state.accountId,
 						state.accountName,
 						zones,
@@ -280,7 +282,7 @@ export class AccountMetricCoordinator extends DurableObject<Env> {
 					);
 				} catch (error) {
 					const msg = error instanceof Error ? error.message : String(error);
-					logger.error("Failed to update zone context", {
+					logger.error("Failed to refresh account-scoped exporter", {
 						query,
 						error: msg,
 					});
